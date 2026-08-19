@@ -19,7 +19,7 @@ same font table the firmware uses, so it matches the panel pixel for pixel.
 
 - NUCLEO-F767ZI (STM32F767ZIT6U)
 - 2.8" ILI9341 module, 240x320, the cheap red one with the SD slot
-- 3.3V, SPI1 at 3 MBit/s
+- 3.3V, SPI1 at 3 MBit/s by default, tested up to 48 MBit/s
 - STM32CubeIDE 2.2.0, CubeMX 6.18.1, arm-none-eabi-gcc 14.3
 
 Other STM32 families should be fine too. The driver only calls HAL_Delay,
@@ -121,9 +121,22 @@ Blocking transfers, SPI at 3 MBit/s, HCLK 96 MHz:
 | Full screen | 76800 | 516 ms |
 | Rectangle outline | 160 | 3 ms |
 
+Same code with the prescaler at 2, so 48 MBit/s:
+
+| What | Pixels | Time |
+| --- | --- | --- |
+| Full screen | 76800 | 94 ms |
+
+16 times the clock bought 5.5 times the speed. Shifting 153600 bytes at that
+rate takes about 26 ms, so most of what is left is not the wire. It is
+HAL_SPI_Transmit polling the TXE flag one byte at a time. Past this point the
+wire is faster than the loop feeding it and the clock stops being the thing
+that matters.
+
 ## Limitations
 
-- Blocking only. No DMA version in here.
+- Blocking only. No DMA version in here, so a full screen bottoms out around
+  94 ms no matter how high you push the clock.
 - One font, one size family.
 - No reading back from the display, the SPI is transmit only.
 - No touch, no SD card.
@@ -134,7 +147,7 @@ Blocking transfers, SPI at 3 MBit/s, HCLK 96 MHz:
 
 ![the board running the demo](docs/example.jpeg)
 
-Same demo on my desk. The background looks dark blue instead of black
+Same demo on my desk. The background looks dark gray instead of black
 because I use a TFT panel that is not capable of showing true black unlike OLED panels, the code really does
 send 0x0000.
 
